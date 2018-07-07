@@ -50,9 +50,9 @@
 </template>
 
 <script>
-import axios from 'axios'
 import auth from '../utils/auth'
 
+// TODO: VALIDATION ESPECIALLY CONFIRM PASSWORD
 export default {
   data: function () {
     return {
@@ -67,17 +67,22 @@ export default {
     submit: function () {
       if (this.verify()) {
         const self = this
+        const query = `
+          mutation {
+            register(
+              email: "${this.email}",
+              password: "${this.password}",
+              firstName: "${this.firstName}",
+              lastName: "${this.lastName}"
+            )
+          }
+        `
 
-        axios.post(this.$endpoint + '/register', {
-          'firstName': this.firstName,
-          'lastName': this.lastName,
-          'email': this.email,
-          'password': this.password
-        })
-          .then(res => {
-            auth.setAccessToken(res.data)
+        this.$graphQLClient.request(query)
+          .then(data => {
+            auth.setAccessToken(data.register)
             self.$router.push('dashboard/performance')
-            self.$store.commit('setUserToken', res.data)
+            self.$store.commit('setUserToken', data.register)
           })
           .catch(err => {
             console.error(err)

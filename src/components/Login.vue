@@ -25,7 +25,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 import auth from '../utils/auth'
 
 export default {
@@ -38,15 +37,17 @@ export default {
   methods: {
     submit: function () {
       const self = this
+      const query = `
+        mutation {
+          login(email: "${this.email}", password: "${this.password}")
+        }
+      `
 
-      axios.post(this.$endpoint + '/login', {
-        email: this.email,
-        password: this.password
-      })
-        .then(res => {
-          auth.setAccessToken(res.data)
+      this.$graphQLClient.request(query)
+        .then(data => {
+          auth.setAccessToken(data.login)
           self.$router.push({ path: '/dashboard/performance' })
-          self.$store.commit('setUserToken', res.data)
+          self.$store.commit('setUserToken', data.login)
         })
         .catch(err => {
           console.error(err)

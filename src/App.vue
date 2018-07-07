@@ -4,7 +4,7 @@
       <br />
       <div v-if="$store.state.userToken">
         <div class="col s1 offset-s11">
-          <a class="left btn-floating btn-large black" v-on:click="logout">
+          <a class="center btn-floating btn-large black" v-on:click="logout">
             <i class="material-icons">exit_to_app</i>
           </a>
         </div>
@@ -20,7 +20,7 @@
         <div class="col s1">
           <router-link
             :to="{ name: 'Register' }"
-            v-bind:class="'right btn-floating btn-large black'">
+            v-bind:class="'center btn-floating btn-large black'">
             <i class="material-icons">person_add</i>
           </router-link>
         </div>

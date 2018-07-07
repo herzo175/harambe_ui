@@ -6,6 +6,7 @@ import App from './App'
 import router from './router'
 import materialize from 'materialize-css'
 import Auth from './utils/auth'
+import { GraphQLClient } from 'graphql-request'
 
 Vue.config.productionTip = false
 
@@ -13,16 +14,17 @@ Vue.use(materialize)
 Vue.use(Vuex)
 
 Vue.prototype.$endpoint = 'http://localhost:8000'
+Vue.prototype.$graphQLClient = new GraphQLClient(Vue.prototype.$endpoint + '/graphql')
 
 const store = new Vuex.Store({
   state: {
-    userToken: Auth.getAccessToken(),
-    user: this.userToken ? Auth.readAccessToken(this.userToken).user : null
+    userToken: Auth.checkAuth() ? Auth.getAccessToken() : null,
+    userId: this.userToken ? Auth.readAccessToken(this.userToken)._id : null
   },
   mutations: {
     setUserToken (state, token) {
       state.userToken = token
-      state.user = Auth.readAccessToken(token).user
+      state.userId = Auth.readAccessToken(token)._id
     },
     removeUserToken (state) {
       state.userToken = null
