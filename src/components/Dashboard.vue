@@ -21,14 +21,6 @@
         </li>
         <li class="tab">
           <router-link
-            :to="{ name: 'Funding' }"
-            v-bind:class="{ 'active': currentTab === 'funding'}"
-            replace>
-            Funding
-          </router-link>
-        </li>
-        <li class="tab">
-          <router-link
             :to="{ name: 'Settings' }"
             v-bind:class="{ 'active': currentTab === 'settings'}"
             replace>

@@ -6,7 +6,52 @@
       Algorithm Settings (waiting period, data period, trend strength, rate of change, volatility)
     -->
     <div class="card">
+      <div v-if="brokers.length > 0" class="card-content">
+        <div class="input-field col s12 m6">
+          <select v-model="broker">
+            <option disabled>Select Broker</option>
+            <option
+              v-for="b in brokers" :key="b.Id" v-bind:value="b">
+              {{ b.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="input-field col s12 m6">
+          <select v-model="brokerAccount">
+            <option disabled>Select Account</option>
+            <option
+              v-for="a in brokerAccounts" :key="a.accountNumber" v-bind:value="a">
+              {{ a.name }}
+            </option>
+          </select>
+        </div>
+
+        <br/>
+        <br/>
+        <br/>
+      </div>
+
       <div class="card-content valign center">
+        <div class="card">
+          <div class="card-content">
+            <h4>Algorithm:</h4>
+            <!--TODO: marketplace of algorithms, search for algorithm link TOS-->
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-content">
+            <!--TODO: error message and link to crontab guru if invalid cron-->
+            <h4>Schedule</h4>
+
+            <input type="text" id="cron_input" placeholder="* * * * * *"/>
+            <label for="cron_input">Cron String</label>
+
+            <h5>Starting On</h5>
+            <input type="text" class="datepicker">
+          </div>
+        </div>
 
         <div class="card">
           <div class="card-content">
@@ -101,6 +146,11 @@ const ColorHash = require('color-hash')
 export default {
   data: function () {
     return {
+      brokers: [],
+      broker: null,
+      brokerAccounts: [],
+      brokerAccount: null,
+      cron: '',
       show: 'shares',
       accountValue: 98197,
       showNewSecurityForm: false,
@@ -151,9 +201,33 @@ export default {
       ]
     }
   },
-  mounted: function () {
-    var elems = document.querySelectorAll('select')
-    window.M.FormSelect.init(elems)
+  methods: {
+    getUser: function () {
+      const self = this
+      const query = `
+        {
+          user(token: "${this.$store.state.userToken}") {
+            brokers {
+              Id
+              name
+              accounts {
+                name
+                accountNumber
+              }
+            }
+          }
+        }
+      `
+
+      this.$graphQLClient.request(query)
+        .then(data => {
+          console.log(data)
+          self.brokers = data.user.brokers
+        })
+        .catch(err => {
+          console.error(err)
+        })
+    }
   },
   components: {
     'd-chart': {
@@ -219,6 +293,20 @@ export default {
         }
       }
     }
+  },
+  created: function () {
+    console.log('created')
+    this.getUser()
+  },
+  mounted: function () {
+    let datepickers = document.querySelectorAll('.datepicker')
+    let selects = document.querySelectorAll('select')
+    window.M.Datepicker.init(datepickers)
+    window.M.FormSelect.init(selects)
+  },
+  updated: function () {
+    var elems = document.querySelectorAll('select')
+    window.M.FormSelect.init(elems)
   }
 }
 </script>
