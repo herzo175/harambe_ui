@@ -22,8 +22,8 @@
 
     <div class="row">
       <div class="input field col s12">
-        <input id="email" type="email" v-model="email"/>
-        <label for="email">Email</label>
+        <input id="emailAddress" type="email" v-model="emailAddress"/>
+        <label for="emailAddress">Email Address</label>
       </div>
     </div>
 
@@ -58,7 +58,7 @@ export default {
     return {
       firstName: '',
       lastName: '',
-      email: '',
+      emailAddress: '',
       password: '',
       confirmPassword: ''
     }
@@ -69,20 +69,22 @@ export default {
         const self = this
         const query = `
           mutation {
-            register(
-              email: "${this.email}",
+            registerUser(
+              emailAddress: "${this.emailAddress}",
               password: "${this.password}",
               firstName: "${this.firstName}",
               lastName: "${this.lastName}"
-            )
+            ) {
+              token
+            }
           }
         `
 
         this.$graphQLClient.request(query)
           .then(data => {
-            auth.setAccessToken(data.register)
-            self.$router.push('dashboard/performance')
-            self.$store.commit('setUserToken', data.register)
+            auth.setAccessToken(data.registerUser.token)
+            self.$router.push({ path: '/dashboard/performance' })
+            self.$store.commit('setUserToken', data.registerUser.token)
           })
           .catch(err => {
             console.error(err)
@@ -91,7 +93,7 @@ export default {
     },
     verify: function () {
       return (
-        (this.firstName && this.lastName && this.email && this.password && this.confirmPassword) &&
+        (this.firstName && this.lastName && this.emailAddress && this.password && this.confirmPassword) &&
         (this.password === this.confirmPassword))
     }
   }

@@ -4,8 +4,8 @@
 
     <div class="row">
       <div class="input field col s12">
-        <input id="email" type="email" v-model="email"/>
-        <label for="email">Email</label>
+        <input id="emailAddress" type="email" v-model="emailAddress"/>
+        <label for="emailAddress">Email Address</label>
       </div>
     </div>
 
@@ -25,12 +25,13 @@
 </template>
 
 <script>
+// TODO: enter button activates login
 import auth from '../utils/auth'
 
 export default {
   data: function () {
     return {
-      email: '',
+      emailAddress: '',
       password: ''
     }
   },
@@ -39,15 +40,17 @@ export default {
       const self = this
       const query = `
         mutation {
-          login(email: "${this.email}", password: "${this.password}")
+          loginUser(emailAddress: "${this.emailAddress}", password: "${this.password}") {
+            token
+          }
         }
       `
 
       this.$graphQLClient.request(query)
         .then(data => {
-          auth.setAccessToken(data.login)
+          auth.setAccessToken(data.loginUser.token)
           self.$router.push({ path: '/dashboard/performance' })
-          self.$store.commit('setUserToken', data.login)
+          self.$store.commit('setUserToken', data.loginUser.token)
         })
         .catch(err => {
           console.error(err)

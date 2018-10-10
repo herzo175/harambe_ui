@@ -22,14 +22,14 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="b in bankAccounts" :key="b._id">
-                  <td>{{ b.accountNickname }}</td>
+                <tr v-for="b in brokers" :key="b.Id">
+                  <td>{{ b.name }}</td>
                   <td>
                     <div class="switch">
                       <label>
                         <input
                           type="checkbox"
-                          v-on:click="setBankAccountDefault(b._id)"
+                          v-on:click="setBrokerAccountDefault(b.Id)"
                           v-bind:checked="b.default"
                           class="filled-in"/>
                         <span class="lever"></span>
@@ -40,7 +40,7 @@
                   <td>
                     <a
                       class="btn-floating black"
-                      v-on:click="removeBankAccount(b._id)">
+                      v-on:click="removeBrokerAccount(b.Id)">
                       <i class="material-icons">clear</i>
                     </a>
                   </td>
@@ -51,43 +51,37 @@
         </div>
         <!--new account drop-->
         <div class="row">
-          <div v-if="!showNewBankAccountForm">
+          <div v-if="!showBrokerList">
             <p class="center-align">
               <a
                 class="btn-floating black"
-                v-on:click="() => showNewBankAccountForm = true">
+                v-on:click="() => { showBrokerList = true; getBrokerList(); }">
                 <i class="material-icons">add</i>
               </a>
             </p>
           </div>
           <div v-else>
-            <p class="center-align">
+            <div class="center-align">
+              <div class="container">
+                <div>
+                  <ul class="collection">
+                    <li v-for="b in availableBrokers" v-bind:key="b" class="collection-item">
+                      <div>
+                        {{ b }}
+                        <a href="#" class="secondary-content" v-on:click="loginBroker(b)">
+                          <i class="material-icons">add</i>
+                        </a>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
               <a
                 class="btn-floating black"
-                v-on:click="() => showNewBankAccountForm = false">
+                v-on:click="() => showBrokerList = false">
                 <i class="material-icons">expand_less</i>
               </a>
-            </p>
-            <transition name="push" mode="out-in">
-              <div class="container">
-                <input id="account-nickname" type="text" v-model="newBankAccountNickname"/>
-                <label for="account-nickname">Account Nickname</label>
-
-                <input id="routing-number" type="text" v-model="newBankAccountRoutingNumber"/>
-                <label for="routing-number">Routing Number</label>
-
-                <input id="account-number" type="text" v-model="newBankAccountNumber"/>
-                <label for="account-number">Account Number</label>
-
-                <p class="right-align">
-                  <a
-                    class="btn-floating black"
-                    v-on:click="saveNewBankAccount">
-                    <i class="material-icons">save</i>
-                  </a>
-                </p>
-              </div>
-            </transition>
+            </div>
           </div>
         </div>
         <!--Notifications boxes-->
@@ -99,7 +93,7 @@
                 <input
                   type="checkbox"
                   v-model="notifications.methods.email"
-                  v-on:click="setNotificationMethodEmail">
+                  v-on:click="() => setNotification('methods', 'email', !notifications.methods.email)">
                 <span>Email</span>
               </label>
             </div>
@@ -108,7 +102,7 @@
                 <input
                   type="checkbox"
                   v-model="notifications.methods.sms"
-                  v-on:click="setNotificationMethodSms">
+                  v-on:click="() => setNotification('methods', 'sms', !notifications.methods.sms)">
                 <span>Text Message</span>
               </label>
             </div>
@@ -120,7 +114,7 @@
                 <input
                   type="checkbox"
                   v-model="notifications.topics.announcements"
-                  v-on:click="setNotificationTopicAnnouncements">
+                  v-on:click="() => setNotification('topics', 'announcements', !notifications.topics.announcements)">
                 <span>Announcements</span>
               </label>
             </div>
@@ -129,7 +123,7 @@
                 <input
                   type="checkbox"
                   v-model="notifications.topics.account"
-                  v-on:click="setNotificationTopicAccount">
+                  v-on:click="() => setNotification('topics', 'account', !notifications.topics.account)">
                 <span>My Account</span>
               </label>
             </div>
@@ -144,13 +138,12 @@
 export default {
   data: () => {
     return {
-      // email: '',
-      // password: '',
-      newBankAccountNickname: '',
-      newBankAccountRoutingNumber: '',
-      newBankAccountNumber: '',
-      showNewBankAccountForm: false,
-      bankAccounts: [],
+      newBrokerAccountNickname: '',
+      newBrokerAccountRoutingNumber: '',
+      newBrokerAccountNumber: '',
+      showBrokerList: false,
+      availableBrokers: [],
+      brokers: [],
       notifications: {
         topics: {
           announcements: false,
@@ -166,85 +159,131 @@ export default {
   methods: {
     getUser: function () {
       const self = this
-      const query = `{
-        User(token: "${this.$store.state.userToken}") {
-          notifications {
-            topics {
-              announcements
-              account
-            }
-            methods {
-              email
-              sms
-            }
-          }
-          bankAccounts {
-            _id
-            accountNickname
-            default
-          }
-        }
-      }`
-
-      this.$graphQLClient.request(query)
-        .then(data => {
-          self.notifications.topics.announcements = data.User.notifications.topics.announcements
-          self.notifications.topics.account = data.User.notifications.topics.account
-          self.notifications.methods.email = data.User.notifications.methods.email
-          self.notifications.methods.sms = data.User.notifications.methods.sms
-          self.bankAccounts = data.User.bankAccounts
-        })
-        .catch(err => {
-          console.error(err)
-        })
-    },
-    saveNewBankAccount: function () {
-      const self = this
       const query = `
-        mutation {
-          createBankAccount (
-            accountNickname: "${this.newBankAccountNickname}",
-            routingNumber: ${this.newBankAccountRoutingNumber},
-            accountNumber: ${this.newBankAccountNumber},
-            token: "${this.$store.state.userToken}"
-          ) {
-            _id
-            accountNickname
-            default
+        {
+          user(token: "${this.$store.state.userToken}") {
+            notifications {
+              topics {
+                announcements
+                account
+              }
+              methods {
+                email
+                sms
+              }
+            }
+            brokers {
+              Id
+              name
+              default
+            }
           }
         }
       `
 
-      self.$graphQLClient.request(query)
+      this.$graphQLClient.request(query)
         .then(data => {
-          console.log(data)
-          self.bankAccounts.push(data.createBankAccount)
-          self.showNewBankAccountForm = false
-          self.newBankAccountNickname = ''
-          self.newBankAccountRoutingNumber = null
-          self.newBankAccountNumber = null
+          self.notifications.topics.announcements = data.user.notifications.topics.announcements
+          self.notifications.topics.account = data.user.notifications.topics.account
+          self.notifications.methods.email = data.user.notifications.methods.email
+          self.notifications.methods.sms = data.user.notifications.methods.sms
+          self.brokers = data.user.brokers
         })
         .catch(err => {
           console.error(err)
         })
     },
-    setBankAccountDefault: async function (_id) {
+    getBrokerList: function () {
+      const self = this
+      const query = `
+        {
+          availableBrokers {
+            shortName
+          }
+        }
+      `
+
+      const currentBrokerNames = this.brokers.map(b2 => b2.brokerName)
+
+      this.$graphQLClient.request(query)
+        .then(data => {
+          self.availableBrokers = data.availableBrokers
+            .filter(b => !currentBrokerNames.includes(b.shortName))
+            .map(b => b.shortName)
+        })
+        .catch(err => {
+          console.error(err)
+        })
+    },
+    loginBroker: function (brokerName) {
+      const self = this
+      const query = `
+        mutation {
+          createBrokerLoginUrl(brokerName: "${brokerName}") {
+            url
+          }
+        }
+      `
+
+      this.$graphQLClient.request(query)
+        .then(data => {
+          const receiveMessage = e => {
+            const data = JSON.parse(e.data)
+            const oAuthVerifier = data.oAuthVerifier
+
+            const query2 = `
+              mutation {
+                createBrokerAccount(
+                  brokerName: "${brokerName}",
+                  oAuthVerifier: "${oAuthVerifier}",
+                  token: "${self.$store.state.userToken}"
+                ) {
+                  broker {
+                    Id
+                    name
+                    default
+                  }
+                }
+              }
+            `
+
+            self.$graphQLClient.request(query2)
+              .then(data => {
+                self.brokers.push(data.createBrokerAccount.broker)
+                self.showBrokerList = false
+              })
+              .catch(err => {
+                console.error(err)
+              })
+          }
+
+          addEventListener('message', receiveMessage, false)
+
+          window.open(data.createBrokerLoginUrl.url)
+        })
+        .catch(err => {
+          console.error(err)
+        })
+    },
+    setBrokerAccountDefault: async function (Id) {
       const self = this
 
-      this.bankAccounts = this.bankAccounts.map(ba => {
-        ba.default = ba._id === _id
+      this.brokers = this.brokers.map(ba => {
+        ba.default = ba.Id === Id
         return ba
       })
 
-      this.bankAccounts.forEach(ba => {
+      this.brokers.forEach(ba => {
         const query = `
           mutation {
-            setBankAccountDefault (
+            setBrokerAccountDefault (
               token: "${self.$store.state.userToken}",
-              _id: "${ba._id}",
-              default: ${_id === ba._id}
+              Id: "${ba.Id}",
+              default: ${Id === ba.Id}
             ) {
-              default
+              broker {
+                default
+              }
             }
           }
         `
@@ -253,97 +292,41 @@ export default {
           .catch(err => console.error(err))
       })
     },
-    removeBankAccount: function (id) {
+    removeBrokerAccount: function (id) {
       const self = this
       const query = `
         mutation {
-          deleteBankAccount (
+          removeBrokerAccount (
             token: "${this.$store.state.userToken}",
-            _id: "${id}"
-          )
+            Id: "${id}"
+          ) {
+            result
+          }
         }
       `
 
       this.$graphQLClient.request(query)
         .then(_ => {
-          const i = self.bankAccounts.findIndex(e => e._id === id)
-          self.bankAccounts.splice(i, 1)
+          const i = self.brokers.findIndex(e => e._id === id)
+          self.brokers.splice(i, 1)
         })
         .catch(err => {
           console.error(err)
         })
     },
-    setNotificationMethodEmail: function () {
-      // NOTE: state is changed after onclick method is fired
+    setNotification: function (type, method, allow) {
       const query = `
         mutation {
-          setNotificationMethodEmail(
-            token: "${String(this.$store.state.userToken)}",
-            allow: ${!this.notifications.methods.email}) {
-              notifications {
-                methods {
-                  email
-                }
-              }
-            }
-        }`
-
-      this.$graphQLClient.request(query)
-        .catch(err => {
-          console.error(err)
-        })
-    },
-    setNotificationMethodSms: function () {
-      const query = `
-        mutation {
-          setNotificationMethodSms(
-            token: "${String(this.$store.state.userToken)}",
-            allow: ${!this.notifications.methods.sms}) {
-              notifications {
-                methods {
-                  sms
-                }
-              }
-            }
-        }`
-
-      this.$graphQLClient.request(query)
-        .catch(err => {
-          console.error(err)
-        })
-    },
-    setNotificationTopicAnnouncements: function () {
-      const query = `
-        mutation {
-          setNotificationTopicAnnouncements(
-            token: "${String(this.$store.state.userToken)}",
-            allow: ${!this.notifications.topics.announcements}) {
-              notifications {
-                topics {
-                  announcements
-                }
-              }
-            }
-        }`
-
-      this.$graphQLClient.request(query)
-        .catch(err => {
-          console.error(err)
-        })
-    },
-    setNotificationTopicAccount: function () {
-      const query = `
-        mutation {
-          setNotificationTopicAccount(
-            token: "${String(this.$store.state.userToken)}",
-            allow: ${!this.notifications.topics.account}) {
-              notifications {
-                topics {
-                  account
-                }
-              }
-            }
-        }`
+          setNotification(
+            token: "${this.$store.state.userToken}",
+            type: "${type}",
+            method: "${method}",
+            allow: ${allow}
+          ) {
+            success
+          }
+        }
+      `
 
       this.$graphQLClient.request(query)
         .catch(err => {

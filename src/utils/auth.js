@@ -9,10 +9,10 @@ let auth = {}
 auth.checkAuth = () => {
   const decoded = auth.readAccessToken(auth.getAccessToken())
 
-  // console.log(new Date(decoded.exp).toString())
-  // console.log(new Date().toString())
+  // console.log(decoded)
+  // console.log('valid:', (decoded && Date.parse(decoded.exp) > Date.now()))
 
-  return decoded && decoded.exp > Date.now()
+  return decoded && Date.parse(decoded.exp) > Date.now()
 }
 
 auth.readAccessToken = (token) => {

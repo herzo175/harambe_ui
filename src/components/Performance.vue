@@ -1,33 +1,63 @@
 <template>
-    <!--TODO: set up transaction and balance formatting server side, data passing to chart-->
-    <div class="card">
-      <div class="card-content">
-        <h4>Account Value: ${{addCommas(accountValue)}}</h4>
-
-        <div class="container">
-          <line-chart></line-chart>
+  <div class="card">
+    <div class="card-content">
+      <div v-if="brokers.length > 0">
+        <div class="input-field col s12 m6">
+          <select v-model="broker">
+            <option disabled>Select Broker</option>
+            <option
+              v-for="b in brokers" :key="b.Id" v-bind:value="b">
+              {{ b.name }}
+            </option>
+          </select>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Balance</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="t in transactions" v-bind:key="t.date">
-              <td>{{ t.date }}</td>
-              <td>${{addCommas(t.accountValue)}}</td>
-              <td>{{ t.notes }}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <br />
+        <div class="input-field col s12 m6">
+          <select v-model="brokerAccount">
+            <option disabled>Select Account</option>
+            <option
+              v-for="a in brokerAccounts" :key="a.accountNumber" v-bind:value="a">
+              {{ a.name }}
+            </option>
+          </select>
+        </div>
       </div>
+
+      <h4 v-if="currentReport">
+        Account Value: ${{addCommas(currentReport.value)}}
+      </h4>
+
+      <div class="container">
+        <div v-if="currentReport">
+          <line-chart
+            v-bind:reports="reports"
+            v-bind:currentReport="currentReport">
+          </line-chart>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Balance</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in reports.concat([currentReport])" v-bind:key="r.date">
+                <td>{{ formatDate(new Date(r.date)) }}</td>
+                <td>${{addCommas(r.value)}}</td>
+                <td>{{ r.description }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else>
+          <h5 class="center-align">Select Account From Broker</h5>
+        </div>
+      </div>
+      <br />
     </div>
+  </div>
 </template>
 
 <script>
@@ -36,38 +66,121 @@ import { Line } from 'vue-chartjs'
 export default {
   data: function () {
     return {
-      accountValue: 98197,
-      transactions: [
-        {
-          date: '5/25/2018',
-          accountValue: 98197,
-          notes: ''
-        },
-        {
-          date: '5/20/2018',
-          accountValue: 98105,
-          notes: 'deposit (+$1000)'
-        }
-      ]
+      brokers: [],
+      broker: null,
+      brokerAccounts: [],
+      brokerAccount: null,
+      reports: [],
+      currentReport: null
     }
   },
   methods: {
     addCommas: function (n) {
       return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    },
+    formatDate: function (d) {
+      return `${d.getMonth() + 1} / ${d.getDate()} / ${d.getFullYear()}`
+    },
+    getUser: function () {
+      const self = this
+      const query = `
+        {
+          user(token: "${this.$store.state.userToken}") {
+            brokers {
+              Id
+              name
+              accounts {
+                name
+                accountNumber
+              }
+            }
+          }
+        }
+      `
+
+      this.$graphQLClient.request(query)
+        .then(data => {
+          self.brokers = data.user.brokers
+        })
+        .catch(err => {
+          console.error(err)
+        })
+    },
+    getReports: function (accountNumber) {
+      const self = this
+      const query = `
+        {
+          reports(token: "${this.$store.state.userToken}", accountNumber: "${accountNumber}") {
+            Id
+            description
+            date
+            cash
+            value
+            buyingPower
+          }
+        }
+      `
+
+      this.$graphQLClient.request(query)
+        .then(data => {
+          const sortedReports = data.reports.sort((a, b) => new Date(a.date) - new Date(b.date))
+          self.reports = sortedReports
+        })
+        .catch(err => {
+          console.error(err)
+        })
+    },
+    getCurrent: function (accountNumber) {
+      const self = this
+      const query = `
+        {
+          report(token: "${this.$store.state.userToken}", brokerId: "${this.broker.Id}", accountNumber: "${accountNumber}") {
+            Id
+            description
+            date
+            cash
+            value
+            buyingPower
+          }
+        }
+      `
+
+      this.$graphQLClient.request(query)
+        .then(data => {
+          self.currentReport = data.report
+        })
+        .catch(err => {
+          console.error(err)
+        })
+    }
+  },
+  watch: {
+    broker: function (broker) {
+      this.brokerAccounts = broker.accounts
+    },
+    brokerAccount: function (brokerAccount) {
+      this.getReports(brokerAccount.accountNumber)
+      this.getCurrent(brokerAccount.accountNumber)
     }
   },
   components: {
     'line-chart': {
       extends: Line,
+      props: ['currentReport', 'reports'],
       mounted: function () {
-        // Overwriting base render method with actual data.
+        const allReports = this.reports.concat([this.currentReport])
+        const months = allReports.map(r => {
+          const d = new Date(r.date)
+          return `${d.getMonth() + 1} / ${d.getDate()} / ${d.getFullYear()}`
+        })
+
         this.renderChart({
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+          labels: months,
           datasets: [
             {
               label: 'Account Value',
               backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              data: [40, 20, 12, 39, 10, 40, 39, 80, 40, 20, 12, 11]
+              data: allReports.map(r => r.value)
             }
           ]
         }, {
@@ -92,6 +205,13 @@ export default {
         })
       }
     }
+  },
+  created: function () {
+    this.getUser()
+  },
+  updated: function () {
+    var elems = document.querySelectorAll('select')
+    window.M.FormSelect.init(elems)
   }
 }
 </script>
@@ -103,5 +223,9 @@ export default {
 
   .container {
     padding: 2%
+  }
+
+  option {
+    text-align: center;
   }
 </style>

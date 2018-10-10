@@ -6,7 +6,6 @@ import Login from '@/components/Login'
 import Register from '@/components/Register'
 import Algorithm from '@/components/Algorithm'
 import Performance from '@/components/Performance'
-import Funding from '@/components/Funding'
 import Settings from '@/components/Settings'
 import Auth from '../utils/auth'
 
@@ -54,11 +53,6 @@ export default new Router({
           path: 'performance',
           name: 'Performance',
           component: Performance
-        },
-        {
-          path: 'funding',
-          name: 'Funding',
-          component: Funding
         },
         {
           path: 'settings',

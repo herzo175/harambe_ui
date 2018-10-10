@@ -5,6 +5,8 @@ import Vuex from 'vuex'
 import App from './App'
 import router from './router'
 import materialize from 'materialize-css'
+import VueMaterial from 'vue-material'
+import 'vue-material/dist/vue-material.min.css'
 import Auth from './utils/auth'
 import { GraphQLClient } from 'graphql-request'
 
@@ -12,8 +14,10 @@ Vue.config.productionTip = false
 
 Vue.use(materialize)
 Vue.use(Vuex)
+Vue.use(VueMaterial)
 
-Vue.prototype.$endpoint = 'http://localhost:8000'
+// TODO: 404 page
+Vue.prototype.$endpoint = 'http://localhost:5000'
 Vue.prototype.$graphQLClient = new GraphQLClient(Vue.prototype.$endpoint + '/graphql')
 
 const store = new Vuex.Store({
